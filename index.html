@@ -1,9 +1,10 @@
-<!DOCTYPE html>
+
+   <!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Brainrot Clicker (Extensions)</title>
+    <title>Brainrot Clicker (Fonctionnel)</title>
     <style>
         /* --- Styles Généraux (Mobile First) --- */
         body {
@@ -32,7 +33,7 @@
         .control-container h3 { border-bottom: 1px solid #1a242f; padding-bottom: 5px; margin-top: 15px; color: #61dafb; }
         button { padding: 10px; background-color: #34495e; border: 1px solid #1a242f; border-radius: 0; color: white; cursor: pointer; font-size: 14px; margin: 3px 0; width: 100%; text-align: left; transition: background-color 0.2s; }
         #minigame-main-button { background-color: #2ecc71; text-align: center; }
-        #discord-button { background-color: #5865F2; text-align: center; } /* Couleur Discord */
+        #discord-button { background-color: #5865F2; text-align: center; }
         button:hover { background-color: #416080; }
         button:disabled { background-color: #34495e80; cursor: not-allowed; opacity: 0.6; }
         
@@ -87,7 +88,6 @@
             </button>
             <p><small id="save-status">Jeu non sauvegardé.</small></p>
 
-            <!-- Bouton pour ouvrir la modale des succès -->
             <button onclick="showAchievementsModal()">Afficher les succès débloqués</button>
         </div>
 
@@ -109,8 +109,7 @@
                 <div id="skin-shop"></div>
             </div>
             
-            <!-- Bouton Discord -->
-            <a href="#" target="_blank" rel="noopener noreferrer">
+            <a href="discord.gg" target="_blank" rel="noopener noreferrer">
                 <button id="discord-button">Rejoindre Discord</button>
             </a>
 
@@ -149,140 +148,358 @@
 
 
     <script>
-        // Logique JavaScript (Rien n'a été supprimé, seulement réorganisé)
-        let score = 0; let clicksPerClick = 1; let baseAutoClickRate = 0; let skinMultiplier = 1; let lastCooldownEndTimestamp = 0; 
+        // --- Variables Globales ---
+        let score = 0; let clicksPerClick = 1; let baseAutoClickRate = 0; let skinMultiplier = 1; let currentSkinEmoji = '🧠';
+        let lastCooldownEndTimestamp = 0; let goldenBrainsClicked = 0; let goldenBrainTimeout;
         let minigameActive = false; let minigameClicksMade = 0; let minigameInterval; let currentChallenge = {};
-        let goldenBrainsClicked = 0; let goldenBrainTimeout;
-
+        
+        // --- Configuration Audio (Mettez vos URL de sons MP3/WAV ici si vous voulez) ---
         const SOUND_CLICK = ''; const SOUND_ACHIEVEMENT = ''; const SOUND_EVENT = '';
         function playSound(url) { if (url) { const audio = new Audio(url); audio.play(); } }
 
-        const cpcUpgrades = [ /* ... inchangé ... */ ]; const upgrades = [ /* ... inchangé ... */ ]; const skins = [ /* ... inchangé ... */ ]; 
+        // --- Définitions des Boutiques et Succès ---
+
+        const cpcUpgrades = [
+            { id: 'cpc1', name: 'Pouvoir du Clic x2', baseCost: 10, costMultiplier: 1.5, cpcBoost: 1, owned: 0 },
+            { id: 'cpc2', name: 'Pouvoir du Clic x5', baseCost: 100, costMultiplier: 1.5, cpcBoost: 4, owned: 0 },
+            { id: 'cpc3', name: 'Pouvoir du Clic x10', baseCost: 1000, costMultiplier: 1.5, cpcBoost: 9, owned: 0 },
+            // Ajoutez d'autres CPC ici
+        ];
+
+        const upgrades = [
+            { id: 'auto1', name: 'Bot Simple', baseCost: 15, costMultiplier: 1.1, cps: 0.1, owned: 0 },
+            { id: 'auto2', name: 'Ferme à Cerveaux', baseCost: 100, costMultiplier: 1.1, cps: 0.5, owned: 0 },
+            { id: 'auto3', name: 'Influenceur TikTok', baseCost: 1000, costMultiplier: 1.1, cps: 5, owned: 0 },
+            // Ajoutez d'autres CPS ici
+        ];
+
+        const skins = [
+            { id: 'skin1', name: 'Cerveau Normal', emoji: '🧠', multiplier: 1, cost: 0, owned: true },
+            { id: 'skin2', name: 'Cerveau Lumineux', emoji: '💡', multiplier: 1.5, cost: 1000, owned: false },
+            { id: 'skin3', name: 'Cerveau Doré', emoji: '🌟', multiplier: 2.0, cost: 5000, owned: false },
+            { id: 'skin4', name: 'Cerveau Maléfique', emoji: '😈', multiplier: 3.0, cost: 25000, owned: false },
+        ];
+
         const achievements = [
             { id: 'start', name: 'Le Commencement', description: 'Atteindre 100 points.', requirement: 100, unlocked: false },
             { id: 'thousand', name: 'Quatre Chiffres', description: 'Atteindre 1 000 points.', requirement: 1000, unlocked: false },
             { id: 'million', name: 'Tycoon Cérébral', description: 'Atteindre 1 million de points.', requirement: 1000000, unlocked: false },
-            { id: 'golden', name: 'Chasseur de Trésor', description: 'Cliquer sur 5 Cerveaux Dorés.', requirement: 5, counter: 0, unlocked: false },
+            { id: 'gclick', name: 'Chasseur de Trésor', description: 'Cliquer sur 5 cerveaux dorés.', requirement: 5, statToTrack: 'goldenBrainsClicked', unlocked: false },
         ];
-        let currentSkin = skins.find(s => s.id === 'normal');
 
-        const scoreElement = document.getElementById('score');
-        const minigameMainButton = document.getElementById('minigame-main-button');
-        const saveStatusElement = document.getElementById('save-status');
-        const cpcUpgradeShopElement = document.getElementById('cpc-upgrade-shop');
-        const upgradeShopElement = document.getElementById('upgrade-shop');
-        const skinShopElement = document.getElementById('skin-shop');
-        const achievementsListElement = document.getElementById('achievements-list');
-        const leftPanelElement = document.getElementById('left-panel');
-        const achievementsPopup = document.getElementById('achievements-popup');
+        // --- Fonctions d'Interface Utilisateur ---
 
-
-        function augmenterScoreManuel() { score += clicksPerClick; playSound(SOUND_CLICK); updateDisplay(); }
-        function augmenterScoreAutomatique() { let totalCps = baseAutoClickRate * skinMultiplier; score += totalCps; checkAchievements(); updateDisplay(); }
-        function recalculateTotals() {
-             clicksPerClick = 1 + cpcUpgrades.reduce((total, upgrade) => total + (upgrade.count * upgrade.cpcBoost), 0);
-             baseAutoClickRate = upgrades.reduce((total, upgrade) => total + (upgrade.count * upgrade.cps), 0);
+        function updateUI() {
+            document.getElementById('score').textContent = Math.floor(score);
+            document.getElementById('cpc').textContent = Math.floor(clicksPerClick * skinMultiplier);
+            document.getElementById('cps').textContent = (baseAutoClickRate * skinMultiplier).toFixed(1);
+            document.getElementById('current-skin').textContent = currentSkinEmoji;
+            renderShop(cpcUpgrades, 'cpc-upgrade-shop', buyCpcUpgrade);
+            renderShop(upgrades, 'upgrade-shop', buyUpgrade);
+            renderSkins();
+            checkAchievements();
         }
         
-        function checkAchievements() { achievements.forEach(ach => { if (!ach.unlocked && score >= ach.requirement) { unlockAchievement(ach.id); } }); }
-        function unlockAchievement(id) { const ach = achievements.find(a => a.id === id); if (ach && !ach.unlocked) { ach.unlocked = true; playSound(SOUND_ACHIEVEMENT); showAchievementUnlocked(ach.name, ach.description); renderAchievements(); saveGame(); } }
-        
-        // Nouvelle fonction d'affichage de succès
-        function showAchievementUnlocked(name, description) {
-            // Ici vous pouvez utiliser la modale des succès, ou juste une petite notification
-            // Pour l'instant, on se contente d'ouvrir la modale avec le nouveau succès visible
-            showAchievementsModal(); 
-        }
-
-        function renderAchievements() {
-            achievementsListElement.innerHTML = '';
-            achievements.forEach(ach => {
-                const li = document.createElement('li');
-                li.textContent = `${ach.name} : ${ach.description}`;
-                if (ach.unlocked) { li.classList.add('unlocked'); }
-                achievementsListElement.appendChild(li);
+        function renderShop(items, containerId, buyFunction) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = '';
+            items.forEach(item => {
+                const cost = Math.floor(item.baseCost * Math.pow(item.costMultiplier, item.owned));
+                const button = document.createElement('button');
+                button.innerHTML = `${item.name} | Coût: ${cost} pts | Possédé: ${item.owned}`;
+                button.disabled = score < cost;
+                button.onclick = () => buyFunction(item.id);
+                container.appendChild(button);
             });
         }
-        function showAchievementsModal() {
-            renderAchievements(); // S'assure que la liste est à jour
-            achievementsPopup.style.display = 'flex';
-        }
-        function closeAchievementsModal() {
-            achievementsPopup.style.display = 'none';
+
+        function renderSkins() {
+            const container = document.getElementById('skin-shop');
+            container.innerHTML = '';
+            skins.forEach(skin => {
+                const button = document.createElement('button');
+                if (skin.owned) {
+                    button.innerHTML = `${skin.emoji} ${skin.name} (x${skin.multiplier}) - ÉQUIPER`;
+                    if (currentSkinEmoji === skin.emoji) {
+                         button.disabled = true;
+                         button.innerHTML = `${skin.emoji} ${skin.name} (Équipé)`;
+                    } else {
+                        button.onclick = () => equipSkin(skin.id);
+                    }
+                } else {
+                    button.innerHTML = `${skin.emoji} ${skin.name} | Coût: ${skin.cost} pts`;
+                    button.disabled = score < skin.cost;
+                    button.onclick = () => buySkin(skin.id);
+                }
+                container.appendChild(button);
+            });
         }
 
-        function scheduleGoldenBrain() { const randomTime = Math.random() * 60000 + 30000; goldenBrainTimeout = setTimeout(spawnGoldenBrain, randomTime); }
-        function spawnGoldenBrain() { playSound(SOUND_EVENT); const brain = document.createElement('span'); brain.id = 'golden-brain'; brain.textContent = '🌟🧠🌟'; brain.onclick = onGoldenBrainClick; const x = Math.random() * (leftPanelElement.offsetWidth - 40); const y = Math.random() * (leftPanelElement.offsetHeight - 40); brain.style.left = `${x}px`; brain.style.top = `${y}px`; leftPanelElement.appendChild(brain); setTimeout(() => { if (brain.parentElement) { brain.parentElement.removeChild(brain); scheduleGoldenBrain(); } }, 5000); }
-        function onGoldenBrainClick(event) {
-            const brain = event.target; brain.parentElement.removeChild(brain);
-            const ach = achievements.find(a => a.id === 'golden'); ach.counter++; if (ach.counter >= ach.requirement) unlockAchievement('golden');
-            const totalCps = baseAutoClickRate * skinMultiplier; const bonus = Math.floor(totalCps * 300) + 1000;
-            score += bonus; // Pas d'alerte, on utilise le nouveau système de succès visuel si débloqué
-            scheduleGoldenBrain(); updateDisplay();
+        function renderAchievementsListInModal() {
+            const list = document.getElementById('achievements-list');
+            list.innerHTML = '';
+            achievements.forEach(ach => {
+                const li = document.createElement('li');
+                li.textContent = `${ach.name}: ${ach.description}`;
+                if (ach.unlocked) {
+                    li.classList.add('unlocked');
+                    li.textContent += ' (DÉBLOQUÉ)';
+                }
+                list.appendChild(li);
+            });
         }
+        
+        // --- Fonctions du Jeu ---
+
+        function augmenterScoreManuel() {
+            if (minigameActive) return;
+            score += clicksPerClick * skinMultiplier;
+            // Animation/Feedback visuel basique
+            const button = document.getElementById('click-button');
+            button.style.transform = 'scale(0.9)';
+            setTimeout(() => button.style.transform = 'scale(1)', 100);
+            playSound(SOUND_CLICK);
+            updateUI();
+        }
+
+        function autoClick() {
+            score += baseAutoClickRate * skinMultiplier;
+            checkAchievements();
+        }
+
+        function buyCpcUpgrade(id) {
+            const item = cpcUpgrades.find(i => i.id === id);
+            const cost = Math.floor(item.baseCost * Math.pow(item.costMultiplier, item.owned));
+            if (score >= cost) {
+                score -= cost;
+                item.owned++;
+                clicksPerClick += item.cpcBoost;
+                updateUI();
+            }
+        }
+
+        function buyUpgrade(id) {
+            const item = upgrades.find(i => i.id === id);
+            const cost = Math.floor(item.baseCost * Math.pow(item.costMultiplier, item.owned));
+            if (score >= cost) {
+                score -= cost;
+                item.owned++;
+                baseAutoClickRate += item.cps;
+                updateUI();
+            }
+        }
+
+        function buySkin(id) {
+            const skin = skins.find(s => s.id === id);
+            if (score >= skin.cost && !skin.owned) {
+                score -= skin.cost;
+                skin.owned = true;
+                equipSkin(id);
+                updateUI();
+            }
+        }
+
+        function equipSkin(id) {
+            const skin = skins.find(s => s.id === id);
+            if (skin.owned) {
+                currentSkinEmoji = skin.emoji;
+                skinMultiplier = skin.multiplier;
+                updateUI();
+            }
+        }
+
+        function checkAchievements() {
+            achievements.forEach(ach => {
+                if (!ach.unlocked) {
+                    let valueToCheck = score;
+                    if (ach.statToTrack === 'goldenBrainsClicked') {
+                        valueToCheck = goldenBrainsClicked;
+                    }
+                    
+                    if (valueToCheck >= ach.requirement) {
+                        ach.unlocked = true;
+                        playSound(SOUND_ACHIEVEMENT);
+                        alert(`SUCCÈS DÉBLOQUÉ : ${ach.name} - ${ach.description}`);
+                    }
+                }
+            });
+        }
+
+        // --- Système de Sauvegarde ---
 
         function saveGame() {
-            const saveData = { score: score, clicksPerClick: clicksPerClick, baseAutoClickRate: baseAutoClickRate, skinMultiplier: skinMultiplier, upgrades: upgrades, cpcUpgrades: cpcUpgrades, skins: skins, achievements: achievements, currentSkinId: currentSkin.id, lastCooldownEndTimestamp: lastCooldownEndTimestamp };
+            const saveData = {
+                score: score,
+                clicksPerClick: clicksPerClick,
+                baseAutoClickRate: baseAutoClickRate,
+                skinMultiplier: skinMultiplier,
+                currentSkinEmoji: currentSkinEmoji,
+                cpcUpgrades: cpcUpgrades,
+                upgrades: upgrades,
+                skins: skins,
+                achievements: achievements,
+                goldenBrainsClicked: goldenBrainsClicked,
+            };
             localStorage.setItem('brainrotClickerSave', JSON.stringify(saveData));
-            saveStatusElement.textContent = "Jeu sauvegardé automatiquement !"; setTimeout(() => saveStatusElement.textContent = "Jeu non sauvegardé.", 3000);
+            document.getElementById('save-status').textContent = 'Jeu sauvegardé !';
+            setTimeout(() => document.getElementById('save-status').textContent = 'Jeu non sauvegardé.', 2000);
         }
 
-        function loadGame() { /* ... inchangé ... */
-            const savedData = JSON.parse(localStorage.getItem('brainrotClickerSave'));
+        function loadGame() {
+            const savedData = localStorage.getItem('brainrotClickerSave');
             if (savedData) {
-                score = savedData.score || 0; skinMultiplier = savedData.skinMultiplier || 1; lastCooldownEndTimestamp = savedData.lastCooldownEndTimestamp || 0;
-                if (savedData.upgrades) savedData.upgrades.forEach(su => { const lu = upgrades.find(u => u.id === su.id); if (lu) lu.count = su.count; });
-                if (savedData.cpcUpgrades) savedData.cpcUpgrades.forEach(sc => { const lc = cpcUpgrades.find(u => u.id === sc.id); if (lc) lc.count = sc.count; });
-                if (savedData.skins) savedData.skins.forEach(ss => { const ls = skins.find(s => s.id === ss.id); if (ls) ls.owned = ss.owned; });
-                if (savedData.achievements) savedData.achievements.forEach(sa => { const la = achievements.find(a => a.id === sa.id); if (la) { la.unlocked = sa.unlocked; if (sa.counter !== undefined) la.counter = sa.counter; } });
-                const savedCurrentSkin = skins.find(s => s.id === savedData.currentSkinId); if (savedCurrentSkin) useSkin(savedCurrentSkin.id);
-                recalculateTotals(); 
-                if (lastCooldownEndTimestamp > Date.now()) { applyCooldown(); } else { minigameMainButton.disabled = false; minigameMainButton.textContent = "Lancer Défi de Vol (Prêt) ⚡"; }
-                updateDisplay();
-                saveStatusElement.textContent = "Partie chargée !"; setTimeout(() => saveStatusElement.textContent = "Jeu non sauvegardé.", 3000);
-            } else { resetGame(); saveStatusElement.textContent = "Nouvelle partie commencée."; setTimeout(() => saveStatusElement.textContent = "Jeu non sauvegardé.", 3000); }
+                const data = JSON.parse(savedData);
+                score = data.score;
+                clicksPerClick = data.clicksPerClick;
+                baseAutoClickRate = data.baseAutoClickRate;
+                skinMultiplier = data.skinMultiplier;
+                currentSkinEmoji = data.currentSkinEmoji;
+                goldenBrainsClicked = data.goldenBrainsClicked || 0;
+                
+                // Mettre à jour les tableaux d'objets avec les données sauvegardées
+                // Note: Une méthode plus robuste serait nécessaire pour les versions futures si les structures changent
+                if (data.cpcUpgrades) data.cpcUpgrades.forEach(s => Object.assign(cpcUpgrades.find(d => d.id === s.id) || {}, s));
+                if (data.upgrades) data.upgrades.forEach(s => Object.assign(upgrades.find(d => d.id === s.id) || {}, s));
+                if (data.skins) data.skins.forEach(s => Object.assign(skins.find(d => d.id === s.id) || {}, s));
+                if (data.achievements) data.achievements.forEach(s => Object.assign(achievements.find(d => d.id === s.id) || {}, s));
+                
+                updateUI();
+                console.log("Jeu chargé.");
+            }
         }
-        
-        function buyCpcUpgrade(upgradeId) { /* ... inchangé ... */ const upgrade = cpcUpgrades.find(u => u.id === upgradeId); const currentCost = Math.floor(upgrade.baseCost * Math.pow(1.2, upgrade.count)); if (score >= currentCost) { score -= currentCost; upgrade.count += 1; recalculateTotals(); updateDisplay(); renderCpcUpgradeShop(); } }
-        function renderCpcUpgradeShop() { /* ... inchangé ... */ document.getElementById('cpc-upgrade-shop').innerHTML = ''; cpcUpgrades.forEach(upgrade => { const currentCost = Math.floor(upgrade.baseCost * Math.pow(1.2, upgrade.count)); const button = document.createElement('button'); button.innerHTML = `${upgrade.name} (+${upgrade.cpcBoost} CPC) (Coût: ${currentCost.toLocaleString()}, Possédé: ${upgrade.count})`; button.onclick = () => buyCpcUpgrade(upgrade.id); button.disabled = (score < currentCost); document.getElementById('cpc-upgrade-shop').appendChild(button); }); }
-        function buyUpgrade(upgradeId) { /* ... inchangé ... */ const upgrade = upgrades.find(u => u.id === upgradeId); const currentCost = Math.floor(upgrade.baseCost * Math.pow(1.15, upgrade.count)); if (score >= currentCost) { score -= currentCost; upgrade.count += 1; recalculateTotals(); updateDisplay(); renderUpgradeShop(); } }
-        function renderUpgradeShop() { /* ... inchangé ... */ document.getElementById('upgrade-shop').innerHTML = ''; upgrades.forEach(upgrade => { const currentCost = Math.floor(upgrade.baseCost * Math.pow(1.15, upgrade.count)); const button = document.createElement('button'); button.innerHTML = `${upgrade.name} (+${upgrade.cps} CPS) (Coût: ${currentCost.toLocaleString()}, Possédé: ${upgrade.count})`; button.onclick = () => buyUpgrade(upgrade.id); button.disabled = (score < currentCost); document.getElementById('upgrade-shop').appendChild(button); }); }
-        function buySkin(skinId) { /* ... inchangé ... */ const skin = skins.find(s => s.id === skinId); if (skin && !skin.owned && score >= skin.cost) { score -= skin.cost; skin.owned = true; useSkin(skinId); updateDisplay(); renderSkinShop(); } }
-        function useSkin(skinId) { /* ... inchangé ... */ const skin = skins.find(s => s.id === skinId); if (skin && skin.owned) { currentSkin = skin; skinMultiplier = skin.multiplier; document.getElementById('current-skin').textContent = skin.emoji; updateDisplay(); } }
-        function renderSkinShop() { /* ... inchangé ... */ document.getElementById('skin-shop').innerHTML = ''; skins.forEach(skin => { const button = document.createElement('button'); if (skin.owned) { button.textContent = `Utiliser ${skin.emoji} (x${skin.multiplier} CPS)`; button.onclick = () => useSkin(skin.id); if (currentSkin.id === skin.id) { button.disabled = true; } } else { button.textContent = `Acheter ${skin.emoji} (Coût: ${skin.cost.toLocaleString()}, x${skin.multiplier} CPS)`; button.onclick = () => buySkin(skin.id); button.disabled = (score < skin.cost); } document.getElementById('skin-shop').appendChild(button); }); }
-
-        function showMinigameChoices() { /* ... inchangé ... */ if (minigameMainButton.disabled) return; document.getElementById('minigame-popup').style.display = 'flex'; document.getElementById('challenge-choices').style.display = 'block'; document.getElementById('challenge-active-area').style.display = 'none'; }
-        function closeMinigameChoices() { document.getElementById('minigame-popup').style.display = 'none'; } // Ajout d'une fonction pour fermer la modale du mini-jeu
-        function startChallenge(requiredClicks, timeLimitSeconds, rewardAmount) { /* ... inchangé ... */ if (minigameActive) return; document.getElementById('challenge-choices').style.display = 'none'; document.getElementById('challenge-active-area').style.display = 'block'; currentChallenge = { required: requiredClicks, time: timeLimitSeconds, reward: rewardAmount }; minigameActive = true; minigameClicksMade = 0; document.getElementById('time-left').textContent = currentChallenge.time.toFixed(1); document.getElementById('clicks-made').textContent = minigameClicksMade; document.getElementById('clicks-required-display').textContent = currentChallenge.required; let timeLeft = currentChallenge.time; minigameInterval = setInterval(() => { timeLeft -= 0.1; document.getElementById('time-left').textContent = timeLeft.toFixed(1); if (timeLeft <= 0) { clearInterval(minigameInterval); endMinigame(false); } }, 100); }
-        function handleMinigameClick() { /* ... inchangé ... */ if (!minigameActive) return; minigameClicksMade++; document.getElementById('clicks-made').textContent = minigameClicksMade; if (minigameClicksMade >= currentChallenge.required) { clearInterval(minigameInterval); endMinigame(true); } }
-        function endMinigame(won) { /* ... inchangé ... */ minigameActive = false; document.getElementById('minigame-popup').style.display = 'none'; if (won) { score += currentChallenge.reward; } else { /* Pas d'alerte, géré visuellement */ } applyCooldown(); updateDisplay(); }
-        function applyCooldown() { /* ... inchangé ... */ const COOLDOWN_TIME_MS = 900000; lastCooldownEndTimestamp = Date.now() + COOLDOWN_TIME_MS; minigameMainButton.disabled = true; const countdownInterval = setInterval(() => { const msLeft = lastCooldownEndTimestamp - Date.now(); if (msLeft <= 0) { clearInterval(countdownInterval); minigameMainButton.disabled = false; minigameMainButton.textContent = "Lancer Défi de Vol (Prêt) ⚡"; } else { const minutes = Math.floor(msLeft / 60000); const seconds = Math.floor((msLeft % 60000) / 1000); minigameMainButton.textContent = `Prochain vol dans ${minutes}:${seconds < 10 ? '0' : ''}${seconds}`; } }, 1000); }
-
 
         function resetGame() {
-            score = 0; clicksPerClick = 1; baseAutoClickRate = 0; skinMultiplier = 1; lastCooldownEndTimestamp = 0;
-            upgrades.forEach(u => u.count = 0); cpcUpgrades.forEach(u => u.count = 0); 
-            skins.forEach((s, index) => s.owned = (index === 0)); useSkin('normal');
-            achievements.forEach(a => { a.unlocked = false; if(a.counter !== undefined) a.counter = 0; });
-            minigameMainButton.disabled = false; minigameMainButton.textContent = "Lancer Défi de Vol (Prêt) ⚡";
-            localStorage.removeItem('brainrotClickerSave'); recalculateTotals(); 
-            if (goldenBrainTimeout) clearTimeout(goldenBrainTimeout); scheduleGoldenBrain(); updateDisplay();
+            if (confirm("Êtes-vous sûr de vouloir réinitialiser toute votre progression ?")) {
+                localStorage.removeItem('brainrotClickerSave');
+                location.reload();
+            }
         }
-
-        function updateDisplay() {
-            scoreElement.textContent = score.toLocaleString();
-            document.getElementById('cps').textContent = (baseAutoClickRate * skinMultiplier).toLocaleString(); 
-            document.getElementById('cpc').textContent = clicksPerClick;
-            renderUpgradeShop(); renderCpcUpgradeShop(); renderSkinShop(); renderAchievements();
-        }
-
-        setInterval(augmenterScoreAutomatique, 1000);
-        setInterval(saveGame, 10000); 
         
-        loadGame(); 
-        scheduleGoldenBrain(); 
-        updateDisplay();
-    </script>
+        // --- Fonctions Mini-Jeu (Vol de points) ---
 
+        function showMinigameChoices() {
+            // Empêche de spammer si déjà ouvert ou en cooldown
+            const now = Date.now();
+            if (now < lastCooldownEndTimestamp) {
+                alert(`Le mini-jeu est en cooldown. Revenez dans ${Math.ceil((lastCooldownEndTimestamp - now) / 1000)} secondes.`);
+                return;
+            }
+            document.getElementById('minigame-popup').style.display = 'flex';
+            document.getElementById('challenge-choices').style.display = 'block';
+            document.getElementById('challenge-active-area').style.display = 'none';
+        }
+
+        function closeMinigameChoices() {
+            document.getElementById('minigame-popup').style.display = 'none';
+        }
+
+        function startChallenge(required, timeLimit, reward) {
+            currentChallenge = { required, timeLimit, reward };
+            minigameActive = true;
+            minigameClicksMade = 0;
+            document.getElementById('clicks-required-display').textContent = required;
+            document.getElementById('clicks-made').textContent = 0;
+            document.getElementById('time-left').textContent = timeLimit.toFixed(1);
+            document.getElementById('challenge-choices').style.display = 'none';
+            document.getElementById('challenge-active-area').style.display = 'block';
+
+            let timeLeft = timeLimit;
+            minigameInterval = setInterval(() => {
+                timeLeft -= 0.1;
+                document.getElementById('time-left').textContent = timeLeft.toFixed(1);
+                if (timeLeft <= 0) {
+                    endChallenge(false);
+                }
+            }, 100);
+        }
+
+        function handleMinigameClick() {
+            if (!minigameActive) return;
+            minigameClicksMade++;
+            document.getElementById('clicks-made').textContent = minigameClicksMade;
+            if (minigameClicksMade >= currentChallenge.required) {
+                endChallenge(true);
+            }
+        }
+
+        function endChallenge(success) {
+            clearInterval(minigameInterval);
+            minigameActive = false;
+            document.getElementById('minigame-popup').style.display = 'none';
+            
+            // Cooldown de 60 secondes après un mini-jeu
+            lastCooldownEndTimestamp = Date.now() + 60000; 
+            
+            if (success) {
+                score += currentChallenge.reward;
+                alert(`Victoire ! Vous avez gagné ${currentChallenge.reward} points !`);
+            } else {
+                alert("Temps écoulé ! Vous avez échoué au défi.");
+            }
+            updateUI();
+        }
+        
+        // --- Fonctions Modales Succès ---
+        
+        function showAchievementsModal() {
+            renderAchievementsListInModal();
+            document.getElementById('achievements-popup').style.display = 'flex';
+        }
+
+        function closeAchievementsModal() {
+            document.getElementById('achievements-popup').style.display = 'none';
+        }
+
+        // --- Événement Cerveau Doré Aléatoire ---
+
+        function spawnGoldenBrain() {
+            if (document.getElementById('golden-brain')) return; // Empêche le spam
+            playSound(SOUND_EVENT);
+
+            const brain = document.createElement('div');
+            brain.id = 'golden-brain';
+            brain.textContent = '🌟'; // Emoji cerveau doré
+            brain.style.top = `${Math.random() * (window.innerHeight - 50)}px`;
+            brain.style.left = `${Math.random() * (window.innerWidth - 50)}px`;
+            brain.onclick = clickGoldenBrain;
+            document.body.appendChild(brain);
+
+            // Disparaît après 5 secondes
+            goldenBrainTimeout = setTimeout(() => {
+                if (brain.parentNode) brain.parentNode.removeChild(brain);
+            }, 5000);
+        }
+
+        function clickGoldenBrain() {
+            const brain = document.getElementById('golden-brain');
+            if (!brain) return;
+            clearTimeout(goldenBrainTimeout);
+            brain.parentNode.removeChild(brain);
+            
+            const pointsGained = Math.floor(score * 0.1) + 50; // 10% du score actuel + 50 points bonus
+            score += pointsGained;
+            goldenBrainsClicked++; // Pour le succès
+            alert(`Cerveau doré cliqué ! Vous gagnez ${pointsGained} points !`);
+            updateUI();
+        }
+        
+        // --- Initialisation et Boucle Principale ---
+
+        // Sauvegarde toutes les 10 secondes
+        setInterval(saveGame, 10000); 
+        // Auto-clic toutes les 100ms
+        setInterval(autoClick, 100); 
+        // Tente de faire apparaître un cerveau doré toutes les 30 secondes (probabilité de 10%)
+        setInterval(() => {
+            if (Math.random() < 0.1) spawnGoldenBrain();
+        }, 30000);
+
+        // Au chargement de la page:
+        window.onload = () => {
+            loadGame();
+            updateUI();
+        };
+
+    </script>
 </body>
 </html>
