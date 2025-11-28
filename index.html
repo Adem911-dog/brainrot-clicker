@@ -26,14 +26,13 @@
         #left-panel { padding: 10px; text-align: center; border-bottom: 2px solid #1a242f; }
         #score-display { font-size: 36px; color: #f1c40f; }
         #cps-display, #cpc-display { font-size: 16px; }
+        /* LIGNE 43 : Règle corrigée, "font-size: 0;" a été supprimé */
         #click-button { 
             background: none; border: none; cursor: pointer; transition: transform 0.1s, filter 0.3s; 
             filter: drop-shadow(0 0 5px rgba(0, 0, 0, 0.5)); margin: 10px 0; 
-            /* Supprime l'espace pris par le texte "button" fantôme si l'emoji n'est pas encore chargé */
-            font-size: 0; 
         }
         /* Cette classe s'applique à l'emoji réel qui a la taille visuelle */
-        .brain-emoji { font-size: 150px; display: block; font-size: 150px; }
+        .brain-emoji { font-size: 150px; display: block; }
         #right-panel { padding: 10px; overflow-y: auto; height: auto; }
         .control-container h3 { border-bottom: 1px solid #1a242f; padding-bottom: 5px; margin-top: 15px; color: #61dafb; }
         button, .discord-link-button { /* Appliquer styles aux boutons ET au lien Discord */
@@ -93,7 +92,6 @@
                 <div id="cps-display">Auto-clics/sec: <span id="cps">0</span></div>
             </div>
             
-            <!-- Le bouton est vide de texte, seule la balise span à l'intérieur compte visuellement -->
             <button id="click-button" onclick="augmenterScoreManuel()">
                 <span id="current-skin" class="brain-emoji">🧠</span>
             </button>
@@ -120,7 +118,7 @@
                 <div id="skin-shop"></div>
             </div>
             
-            <!-- Lien Discord prêt à recevoir votre URL -->
+            <!-- VOTRE LIEN DISCORD EST ICI -->
             <a href="https://discord.gg/vSfdcZqeY6" target="_blank" rel="noopener noreferrer" class="discord-link-button" id="discord-button">
                 Rejoindre Discord
             </a>
