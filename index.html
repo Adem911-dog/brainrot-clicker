@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Brainrot Clicker (Fonctionnel)</title>
+    <title>Brainrot Clicker </title>
     <style>
         /* --- Styles Généraux (Mobile First) --- */
         body {
@@ -150,27 +150,6 @@
             #game-wrapper {
                 flex-direction: row; 
             }
-
-            #left-panel {
-                flex-basis: 60%;
-                padding: 20px;
-                border-right: 2px solid #1a242f;
-                border-bottom: none; 
-            }
-
-            #right-panel {
-                flex-basis: 40%;
-                padding: 10px;
-                height: 600px; 
-            }
-
-            #score-display {
-                font-size: 48px; 
-            }
-
-            .brain-emoji {
-                font-size: 180px; 
-            }
         }
     </style>
 </head>
@@ -188,6 +167,7 @@
             <button id="click-button" onclick="augmenterScoreManuel()">
                 <span id="current-skin" class="brain-emoji">🧠</span>
             </button>
+            <p><small id="save-status">Jeu non sauvegardé.</small></p>
         </div>
 
         <div id="right-panel">
@@ -248,6 +228,7 @@
         let minigameClicksMade = 0;
         let minigameInterval;
         let currentChallenge = {};
+        let lastCooldownEndTimestamp = 0; // Ajout d'un timestamp pour le cooldown
         let hasPlayedMinigame = false; 
 
         const upgrades = [
@@ -271,12 +252,11 @@
         let currentSkin = skins.find(s => s.id === 'normal');
 
         const scoreElement = document.getElementById('score');
-        const cpsElement = document.getElementById('cps');
-        const cpcElement = document.getElementById('cpc');
         const minigameMainButton = document.getElementById('minigame-main-button');
         const minigamePopup = document.getElementById('minigame-popup');
         const challengeChoicesArea = document.getElementById('challenge-choices');
         const challengeActiveArea = document.getElementById('challenge-active-area');
+        const saveStatusElement = document.getElementById('save-status');
 
 
         function augmenterScoreManuel() {
@@ -290,8 +270,7 @@
             updateDisplay();
         }
         
-        // --- Logique du Mini-Jeu ---
-
+        // --- Logique du Mini-Jeu (inchangée) ---
         function showMinigameChoices() {
             if (minigameMainButton.disabled) return;
             minigamePopup.style.display = 'flex';
@@ -299,20 +278,16 @@
             challengeActiveArea.style.display = 'none';
         }
 
-        function startChallenge(requiredClicks, timeLimitSeconds, rewardAmount) {
+        function startChallenge(requiredClicks, timeLimitSeconds, rewardAmount) { /* ... inchangé ... */
             if (minigameActive) return;
-
             challengeChoicesArea.style.display = 'none';
             challengeActiveArea.style.display = 'block';
-
             currentChallenge = { required: requiredClicks, time: timeLimitSeconds, reward: rewardAmount };
             minigameActive = true;
             minigameClicksMade = 0;
-            // Assure que les éléments DOM sont bien trouvés et mis à jour
             document.getElementById('time-left').textContent = currentChallenge.time.toFixed(1);
             document.getElementById('clicks-made').textContent = minigameClicksMade;
             document.getElementById('clicks-required-display').textContent = currentChallenge.required;
-            
             let timeLeft = currentChallenge.time;
             minigameInterval = setInterval(() => {
                 timeLeft -= 0.1;
@@ -324,12 +299,10 @@
             }, 100);
         }
 
-        function handleMinigameClick() {
+        function handleMinigameClick() { /* ... inchangé ... */
             if (!minigameActive) return;
-
             minigameClicksMade++;
             document.getElementById('clicks-made').textContent = minigameClicksMade;
-
             if (minigameClicksMade >= currentChallenge.required) {
                 clearInterval(minigameInterval);
                 endMinigame(true);
@@ -339,34 +312,115 @@
         function endMinigame(won) {
             minigameActive = false;
             minigamePopup.style.display = 'none'; 
-
             if (won) {
                 score += currentChallenge.reward;
                 alert(`VICTOIRE ! Vous avez volé ${currentChallenge.reward.toLocaleString()} points bonus !`);
             } else {
                 alert("TEMPS ÉCOULÉ ou objectif non atteint ! Vous n'avez rien volé cette fois-ci.");
             }
-            
             hasPlayedMinigame = true;
             applyCooldown();
             updateDisplay();
         }
         
         function applyCooldown() {
-            const COOLDOWN_TIME = 900000; // 15 minutes en ms
+            const COOLDOWN_TIME_MS = 900000; // 15 minutes en ms
+            lastCooldownEndTimestamp = Date.now() + COOLDOWN_TIME_MS; // Enregistre quand le cooldown finit
             minigameMainButton.disabled = true;
-            minigameMainButton.textContent = "Prochain vol dans 15 minutes...";
-
-            setTimeout(() => {
-                minigameMainButton.disabled = false;
-                minigameMainButton.textContent = "Lancer Défi de Vol (Prêt) 🧠⚡";
-            }, COOLDOWN_TIME);
+            
+            // Met à jour le texte du bouton avec le temps restant
+            const countdownInterval = setInterval(() => {
+                const msLeft = lastCooldownEndTimestamp - Date.now();
+                if (msLeft <= 0) {
+                    clearInterval(countdownInterval);
+                    minigameMainButton.disabled = false;
+                    minigameMainButton.textContent = "Lancer Défi de Vol (Prêt) 🧠⚡";
+                } else {
+                    const minutes = Math.floor(msLeft / 60000);
+                    const seconds = Math.floor((msLeft % 60000) / 1000);
+                    minigameMainButton.textContent = `Prochain vol dans ${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+                }
+            }, 1000);
         }
-
         // --- Fin Logique du Mini-Jeu ---
 
 
-        function buyUpgrade(upgradeId) {
+        // --- Logique de Sauvegarde et Chargement ---
+        function saveGame() {
+            const saveData = {
+                score: score,
+                clicksPerClick: clicksPerClick,
+                baseAutoClickRate: baseAutoClickRate,
+                skinMultiplier: skinMultiplier,
+                upgrades: upgrades, // Sauvegarde le tableau d'upgrades avec leurs counts
+                skins: skins,     // Sauvegarde le tableau de skins avec leur état owned
+                currentSkinId: currentSkin.id,
+                lastCooldownEndTimestamp: lastCooldownEndTimestamp // Sauvegarde le timestamp du cooldown
+            };
+            localStorage.setItem('brainrotClickerSave', JSON.stringify(saveData));
+            saveStatusElement.textContent = "Jeu sauvegardé automatiquement !";
+            setTimeout(() => saveStatusElement.textContent = "", 3000); // Efface le message après 3s
+        }
+
+        function loadGame() {
+            const savedData = JSON.parse(localStorage.getItem('brainrotClickerSave'));
+            if (savedData) {
+                score = savedData.score || 0;
+                clicksPerClick = savedData.clicksPerClick || 1;
+                baseAutoClickRate = savedData.baseAutoClickRate || 0;
+                skinMultiplier = savedData.skinMultiplier || 1;
+                lastCooldownEndTimestamp = savedData.lastCooldownEndTimestamp || 0;
+                
+                // Charge les comptes d'upgrades sauvegardés
+                if (savedData.upgrades) {
+                    savedData.upgrades.forEach(savedUpgrade => {
+                        const localUpgrade = upgrades.find(u => u.id === savedUpgrade.id);
+                        if (localUpgrade) {
+                            localUpgrade.count = savedUpgrade.count;
+                        }
+                    });
+                }
+
+                // Charge l'état des skins et le skin actuel
+                if (savedData.skins) {
+                    savedData.skins.forEach(savedSkin => {
+                        const localSkin = skins.find(s => s.id === savedSkin.id);
+                        if (localSkin) {
+                            localSkin.owned = savedSkin.owned;
+                        }
+                    });
+                }
+                const savedCurrentSkin = skins.find(s => s.id === savedData.currentSkinId);
+                if (savedCurrentSkin) {
+                    useSkin(savedCurrentSkin.id);
+                }
+
+                // Recalcule le CPS total de base à partir des comptes chargés
+                baseAutoClickRate = upgrades.reduce((total, upgrade) => total + (upgrade.count * upgrade.cps), 0);
+
+                // Ré-applique le cooldown si nécessaire
+                if (lastCooldownEndTimestamp > Date.now()) {
+                    applyCooldown();
+                } else {
+                    minigameMainButton.disabled = false;
+                    minigameMainButton.textContent = "Lancer Défi de Vol (Prêt) 🧠⚡";
+                }
+
+                updateDisplay();
+                saveStatusElement.textContent = "Partie chargée !";
+                setTimeout(() => saveStatusElement.textContent = "", 3000);
+            } else {
+                // Si aucune sauvegarde trouvée, initialise le jeu normalement
+                resetGame();
+                saveStatusElement.textContent = "Nouvelle partie commencée.";
+                setTimeout(() => saveStatusElement.textContent = "", 3000);
+            }
+        }
+        // --- Fin Logique de Sauvegarde et Chargement ---
+
+
+        // ... (Fonctions buyUpgrade, renderUpgradeShop, buySkin, useSkin, renderSkinShop inchangées) ...
+        function buyUpgrade(upgradeId) { /* ... */
             const upgrade = upgrades.find(u => u.id === upgradeId);
             const currentCost = Math.floor(upgrade.baseCost * Math.pow(1.15, upgrade.count));
             if (score >= currentCost) {
@@ -378,7 +432,7 @@
             }
         }
         
-        function renderUpgradeShop() {
+        function renderUpgradeShop() { /* ... */
             const upgradeShopElement = document.getElementById('upgrade-shop');
             upgradeShopElement.innerHTML = '';
             upgrades.forEach(upgrade => {
@@ -391,7 +445,7 @@
             });
         }
         
-        function buySkin(skinId) {
+        function buySkin(skinId) { /* ... */
             const skin = skins.find(s => s.id === skinId);
             if (skin && !skin.owned && score >= skin.cost) {
                 score -= skin.cost;
@@ -402,7 +456,7 @@
             }
         }
 
-        function useSkin(skinId) {
+        function useSkin(skinId) { /* ... */
             const skin = skins.find(s => s.id === skinId);
             if (skin && skin.owned) {
                 currentSkin = skin;
@@ -412,7 +466,7 @@
             }
         }
 
-        function renderSkinShop() {
+        function renderSkinShop() { /* ... */
             const skinShopElement = document.getElementById('skin-shop');
             skinShopElement.innerHTML = '';
             skins.forEach(skin => {
@@ -437,14 +491,16 @@
             clicksPerClick = 1;
             baseAutoClickRate = 0;
             skinMultiplier = 1;
-            hasPlayedMinigame = false;
+            lastCooldownEndTimestamp = 0;
             upgrades.forEach(u => u.count = 0);
             skins.forEach((s, index) => s.owned = (index === 0));
             useSkin('normal');
             
-            // Au reset, le bouton est immédiatement disponible 
             minigameMainButton.disabled = false;
             minigameMainButton.textContent = "Lancer Défi de Vol (Prêt) 🧠⚡";
+
+            // Efface la sauvegarde lors d'un reset manuel
+            localStorage.removeItem('brainrotClickerSave');
 
             updateDisplay();
             renderUpgradeShop();
@@ -453,20 +509,20 @@
 
         function updateDisplay() {
             scoreElement.textContent = score.toLocaleString();
-            cpsElement.textContent = (baseAutoClickRate * skinMultiplier).toLocaleString(); 
-            cpcElement.textContent = clicksPerClick;
+            document.getElementById('cps').textContent = (baseAutoClickRate * skinMultiplier).toLocaleString(); 
+            document.getElementById('cpc').textContent = clicksPerClick;
             
             renderUpgradeShop();
             renderSkinShop(); 
         }
 
+        // --- Initialisation et Intervalles ---
         setInterval(augmenterScoreAutomatique, 1000);
+        setInterval(saveGame, 10000); // Sauvegarde automatique toutes les 10 secondes
         
-        resetGame(); 
+        loadGame(); // Charge la partie au démarrage
         updateDisplay();
     </script>
 
 </body>
 </html>
-  
-  
