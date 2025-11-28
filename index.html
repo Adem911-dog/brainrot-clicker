@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Brainrot Clicker</title>
+    <title>Brainrot Clicker (Fonctionnel)</title>
     <style>
         /* --- Styles Généraux (Mobile First) --- */
         body {
@@ -26,9 +26,14 @@
         #left-panel { padding: 10px; text-align: center; border-bottom: 2px solid #1a242f; }
         #score-display { font-size: 36px; color: #f1c40f; }
         #cps-display, #cpc-display { font-size: 16px; }
-        #click-button { background: none; border: none; cursor: pointer; transition: transform 0.1s, filter 0.3s; filter: drop-shadow(0 0 5px rgba(0, 0, 0, 0.5)); margin: 10px 0; }
+        #click-button { 
+            background: none; border: none; cursor: pointer; transition: transform 0.1s, filter 0.3s; 
+            filter: drop-shadow(0 0 5px rgba(0, 0, 0, 0.5)); margin: 10px 0; 
+            /* Supprime l'espace pris par le texte "button" fantôme si l'emoji n'est pas encore chargé */
+            font-size: 0; 
+        }
         /* Cette classe s'applique à l'emoji réel qui a la taille visuelle */
-        .brain-emoji { font-size: 150px; display: block; }
+        .brain-emoji { font-size: 150px; display: block; font-size: 150px; }
         #right-panel { padding: 10px; overflow-y: auto; height: auto; }
         .control-container h3 { border-bottom: 1px solid #1a242f; padding-bottom: 5px; margin-top: 15px; color: #61dafb; }
         button, .discord-link-button { /* Appliquer styles aux boutons ET au lien Discord */
@@ -40,7 +45,7 @@
         #minigame-main-button { background-color: #2ecc71; text-align: center; }
         #discord-button { background-color: #5865F2; text-align: center; }
         button:hover, .discord-link-button:hover { background-color: #416080; }
-        button:disabled { background-color: #34495e80; cursor: not-allowed; opacity: 0.6; }
+        button:disabled { cursor: not-allowed; opacity: 0.6; }
         
         /* Style pour l'événement Cerveau Doré */
         #golden-brain {
@@ -88,7 +93,7 @@
                 <div id="cps-display">Auto-clics/sec: <span id="cps">0</span></div>
             </div>
             
-            <!-- Le bouton a une fonction onclick mais son contenu est uniquement l'emoji span -->
+            <!-- Le bouton est vide de texte, seule la balise span à l'intérieur compte visuellement -->
             <button id="click-button" onclick="augmenterScoreManuel()">
                 <span id="current-skin" class="brain-emoji">🧠</span>
             </button>
@@ -116,7 +121,7 @@
             </div>
             
             <!-- Lien Discord prêt à recevoir votre URL -->
-            <a href="URL_DE_VOTRE_INVITATION_DISCORD_ICI" target="_blank" rel="noopener noreferrer" class="discord-link-button" id="discord-button">
+            <a href="https://discord.gg/vSfdcZqeY6" target="_blank" rel="noopener noreferrer" class="discord-link-button" id="discord-button">
                 Rejoindre Discord
             </a>
 
@@ -160,11 +165,8 @@
         let lastCooldownEndTimestamp = 0; let goldenBrainsClicked = 0; let goldenBrainTimeout;
         let minigameActive = false; let minigameClicksMade = 0; let minigameInterval; let currentChallenge = {};
         
-        // --- Configuration Audio (Mettez vos URL de sons MP3/WAV ici si vous voulez) ---
         const SOUND_CLICK = ''; const SOUND_ACHIEVEMENT = ''; const SOUND_EVENT = '';
         function playSound(url) { if (url) { const audio = new Audio(url); audio.play(); } }
-
-        // --- Définitions des Boutiques et Succès ---
 
         const cpcUpgrades = [
             { id: 'cpc1', name: 'Pouvoir du Clic x2', baseCost: 10, costMultiplier: 1.5, cpcBoost: 1, owned: 0 },
@@ -191,8 +193,6 @@
             { id: 'million', name: 'Tycoon Cérébral', description: 'Atteindre 1 million de points.', requirement: 1000000, unlocked: false },
             { id: 'gclick', name: 'Chasseur de Trésor', description: 'Cliquer sur 5 cerveaux dorés.', requirement: 5, statToTrack: 'goldenBrainsClicked', unlocked: false },
         ];
-
-        // --- Fonctions d'Interface Utilisateur ---
 
         function updateUI() {
             document.getElementById('score').textContent = Math.floor(score);
@@ -254,8 +254,6 @@
             });
         }
         
-        // --- Fonctions du Jeu ---
-
         function augmenterScoreManuel() {
             if (minigameActive) return;
             score += clicksPerClick * skinMultiplier;
@@ -323,27 +321,17 @@
                     if (valueToCheck >= ach.requirement) {
                         ach.unlocked = true;
                         playSound(SOUND_ACHIEVEMENT);
-                        // Ne pas utiliser alert() ici pour ne pas bloquer le jeu loop, idéalement utiliser une notification custom
                         console.log(`SUCCÈS DÉBLOQUÉ : ${ach.name}`);
                     }
                 }
             });
         }
 
-        // --- Système de Sauvegarde ---
-
         function saveGame() {
             const saveData = {
-                score: score,
-                clicksPerClick: clicksPerClick,
-                baseAutoClickRate: baseAutoClickRate,
-                skinMultiplier: skinMultiplier,
-                currentSkinEmoji: currentSkinEmoji,
-                cpcUpgrades: cpcUpgrades,
-                upgrades: upgrades,
-                skins: skins,
-                achievements: achievements,
-                goldenBrainsClicked: goldenBrainsClicked,
+                score: score, clicksPerClick: clicksPerClick, baseAutoClickRate: baseAutoClickRate, skinMultiplier: skinMultiplier,
+                currentSkinEmoji: currentSkinEmoji, cpcUpgrades: cpcUpgrades, upgrades: upgrades, skins: skins,
+                achievements: achievements, goldenBrainsClicked: goldenBrainsClicked,
             };
             localStorage.setItem('brainrotClickerSave', JSON.stringify(saveData));
             document.getElementById('save-status').textContent = 'Jeu sauvegardé !';
@@ -354,11 +342,8 @@
             const savedData = localStorage.getItem('brainrotClickerSave');
             if (savedData) {
                 const data = JSON.parse(savedData);
-                score = data.score;
-                clicksPerClick = data.clicksPerClick;
-                baseAutoClickRate = data.baseAutoClickRate;
-                skinMultiplier = data.skinMultiplier;
-                currentSkinEmoji = data.currentSkinEmoji;
+                score = data.score; clicksPerClick = data.clicksPerClick; baseAutoClickRate = data.baseAutoClickRate; 
+                skinMultiplier = data.skinMultiplier; currentSkinEmoji = data.currentSkinEmoji;
                 goldenBrainsClicked = data.goldenBrainsClicked || 0;
                 
                 if (data.cpcUpgrades) data.cpcUpgrades.forEach(s => Object.assign(cpcUpgrades.find(d => d.id === s.id) || {}, s));
@@ -378,8 +363,6 @@
             }
         }
         
-        // --- Fonctions Mini-Jeu (Vol de points) ---
-
         function showMinigameChoices() {
             const now = Date.now();
             if (now < lastCooldownEndTimestamp) {
@@ -440,8 +423,6 @@
             updateUI();
         }
         
-        // --- Fonctions Modales Succès ---
-        
         function showAchievementsModal() {
             renderAchievementsListInModal();
             document.getElementById('achievements-popup').style.display = 'flex';
@@ -450,8 +431,6 @@
         function closeAchievementsModal() {
             document.getElementById('achievements-popup').style.display = 'none';
         }
-
-        // --- Événement Cerveau Doré Aléatoire ---
 
         function spawnGoldenBrain() {
             if (document.getElementById('golden-brain')) return;
@@ -483,8 +462,6 @@
             updateUI();
         }
         
-        // --- Initialisation et Boucle Principale ---
-
         setInterval(saveGame, 10000); 
         setInterval(autoClick, 100); 
         setInterval(() => {
