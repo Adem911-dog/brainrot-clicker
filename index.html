@@ -26,7 +26,6 @@
         #left-panel { padding: 10px; text-align: center; border-bottom: 2px solid #1a242f; }
         #score-display { font-size: 36px; color: #f1c40f; }
         #cps-display, #cpc-display { font-size: 16px; }
-        /* LIGNE 43 : Règle corrigée, "font-size: 0;" a été supprimé */
         #click-button { 
             background: none; border: none; cursor: pointer; transition: transform 0.1s, filter 0.3s; 
             filter: drop-shadow(0 0 5px rgba(0, 0, 0, 0.5)); margin: 10px 0; 
@@ -118,8 +117,7 @@
                 <div id="skin-shop"></div>
             </div>
             
-            <!-- VOTRE LIEN DISCORD EST ICI -->
-            <a href="https://discord.gg/vSfdcZqeY6" target="_blank" rel="noopener noreferrer" class="discord-link-button" id="discord-button">
+            <a href="discord.gg" target="_blank" rel="noopener noreferrer" class="discord-link-button" id="discord-button">
                 Rejoindre Discord
             </a>
 
@@ -159,23 +157,40 @@
 
     <script>
         // --- Variables Globales ---
-        let score = 0; let clicksPerClick = 1; let baseAutoClickRate = 0; let skinMultiplier = 1; let currentSkinEmoji = '🧠';
+        let score = 0; let clicksPerClick = 1; let baseAutoClickRate = 0; 
+        let skinMultiplier = 1; 
+        let currentSkinEmoji = '🧠'; 
+
         let lastCooldownEndTimestamp = 0; let goldenBrainsClicked = 0; let goldenBrainTimeout;
         let minigameActive = false; let minigameClicksMade = 0; let minigameInterval; let currentChallenge = {};
         
         const SOUND_CLICK = ''; const SOUND_ACHIEVEMENT = ''; const SOUND_EVENT = '';
         function playSound(url) { if (url) { const audio = new Audio(url); audio.play(); } }
 
+        // --- Définitions des Boutiques et Succès (BEAUCOUP PLUS D'ÉLÉMENTS AJOUTÉS) ---
+
         const cpcUpgrades = [
             { id: 'cpc1', name: 'Pouvoir du Clic x2', baseCost: 10, costMultiplier: 1.5, cpcBoost: 1, owned: 0 },
             { id: 'cpc2', name: 'Pouvoir du Clic x5', baseCost: 100, costMultiplier: 1.5, cpcBoost: 4, owned: 0 },
             { id: 'cpc3', name: 'Pouvoir du Clic x10', baseCost: 1000, costMultiplier: 1.5, cpcBoost: 9, owned: 0 },
+            { id: 'cpc4', name: 'Pouvoir du Clic x20', baseCost: 5000, costMultiplier: 1.5, cpcBoost: 19, owned: 0 },
+            { id: 'cpc5', name: 'Pouvoir du Clic x50', baseCost: 25000, costMultiplier: 1.5, cpcBoost: 49, owned: 0 },
+            { id: 'cpc6', name: 'Pouvoir du Clic x100', baseCost: 100000, costMultiplier: 1.5, cpcBoost: 99, owned: 0 },
+            { id: 'cpc7', name: 'Frappe Cérébrale', baseCost: 500000, costMultiplier: 1.5, cpcBoost: 450, owned: 0 },
+            { id: 'cpc8', name: 'Implosion Neuronale', baseCost: 2000000, costMultiplier: 1.5, cpcBoost: 1800, owned: 0 },
+            { id: 'cpc9', name: 'Maître Clickeur', baseCost: 10000000, costMultiplier: 1.5, cpcBoost: 9000, owned: 0 },
         ];
 
         const upgrades = [
             { id: 'auto1', name: 'Bot Simple', baseCost: 15, costMultiplier: 1.1, cps: 0.1, owned: 0 },
             { id: 'auto2', name: 'Ferme à Cerveaux', baseCost: 100, costMultiplier: 1.1, cps: 0.5, owned: 0 },
             { id: 'auto3', name: 'Influenceur TikTok', baseCost: 1000, costMultiplier: 1.1, cps: 5, owned: 0 },
+            { id: 'auto4', name: 'Usine à Mèmes', baseCost: 5000, costMultiplier: 1.1, cps: 25, owned: 0 },
+            { id: 'auto5', name: 'Centre de Recherche', baseCost: 25000, costMultiplier: 1.1, cps: 120, owned: 0 },
+            { id: 'auto6', name: 'Data Center Global', baseCost: 100000, costMultiplier: 1.1, cps: 500, owned: 0 },
+            { id: 'auto7', name: 'IA Générative', baseCost: 500000, costMultiplier: 1.1, cps: 2500, owned: 0 },
+            { id: 'auto8', name: 'Singularité Numérique', baseCost: 2000000, costMultiplier: 1.1, cps: 10000, owned: 0 },
+            { id: 'auto9', name: 'Conscience Collective', baseCost: 10000000, costMultiplier: 1.1, cps: 50000, owned: 0 },
         ];
 
         const skins = [
@@ -183,13 +198,21 @@
             { id: 'skin2', name: 'Cerveau Lumineux', emoji: '💡', multiplier: 1.5, cost: 1000, owned: false },
             { id: 'skin3', name: 'Cerveau Doré', emoji: '🌟', multiplier: 2.0, cost: 5000, owned: false },
             { id: 'skin4', name: 'Cerveau Maléfique', emoji: '😈', multiplier: 3.0, cost: 25000, owned: false },
+            { id: 'skin5', name: 'Cerveau Glacé', emoji: '🧊', multiplier: 4.0, cost: 100000, owned: false },
+            { id: 'skin6', name: 'Cerveau Arc-en-ciel', emoji: '🌈', multiplier: 6.0, cost: 500000, owned: false },
+            { id: 'skin7', name: 'Cerveau Hacker', emoji: '💻', multiplier: 8.0, cost: 2000000, owned: false },
+            { id: 'skin8', name: 'Cerveau Cosmique', emoji: '🌌', multiplier: 10.0, cost: 5000000, owned: false },
+            { id: 'skin9', name: 'Cerveau de Diamant', emoji: '💎', multiplier: 15.0, cost: 25000000, owned: false },
+            { id: 'skin10', name: 'Cerveau Ultime', emoji: '🤯', multiplier: 25.0, cost: 100000000, owned: false },
         ];
 
         const achievements = [
             { id: 'start', name: 'Le Commencement', description: 'Atteindre 100 points.', requirement: 100, unlocked: false },
             { id: 'thousand', name: 'Quatre Chiffres', description: 'Atteindre 1 000 points.', requirement: 1000, unlocked: false },
             { id: 'million', name: 'Tycoon Cérébral', description: 'Atteindre 1 million de points.', requirement: 1000000, unlocked: false },
+            { id: 'billion', name: 'Milliardaire de la Tête', description: 'Atteindre 1 milliard de points.', requirement: 1000000000, unlocked: false },
             { id: 'gclick', name: 'Chasseur de Trésor', description: 'Cliquer sur 5 cerveaux dorés.', requirement: 5, statToTrack: 'goldenBrainsClicked', unlocked: false },
+            { id: 'gclicker2', name: 'Collectionneur d\'Étoiles', description: 'Cliquer sur 50 cerveaux dorés.', requirement: 50, statToTrack: 'goldenBrainsClicked', unlocked: false },
         ];
 
         function updateUI() {
@@ -209,7 +232,7 @@
             items.forEach(item => {
                 const cost = Math.floor(item.baseCost * Math.pow(item.costMultiplier, item.owned));
                 const button = document.createElement('button');
-                button.innerHTML = `${item.name} | Coût: ${cost} pts | Possédé: ${item.owned}`;
+                button.innerHTML = `${item.name} | Coût: ${cost.toLocaleString()} pts | Possédé: ${item.owned}`;
                 button.disabled = score < cost;
                 button.onclick = () => buyFunction(item.id);
                 container.appendChild(button);
@@ -230,7 +253,7 @@
                         button.onclick = () => equipSkin(skin.id);
                     }
                 } else {
-                    button.innerHTML = `${skin.emoji} ${skin.name} | Coût: ${skin.cost} pts`;
+                    button.innerHTML = `${skin.emoji} ${skin.name} | Coût: ${skin.cost.toLocaleString()} pts`;
                     button.disabled = score < skin.cost;
                     button.onclick = () => buySkin(skin.id);
                 }
@@ -351,6 +374,8 @@
                 
                 updateUI();
                 console.log("Jeu chargé.");
+            } else {
+                equipSkin('skin1');
             }
         }
 
