@@ -125,6 +125,7 @@
         <div id="left-panel">
             <h1>Brainrot Clicker</h1>
             <div id="stats-display">
+                <!-- Texte de l'image -->
                 <div id="score-display"><span id="score">0</span> points</div>
                 <div id="cpc-display">Points/Clic: <span id="cpc">1</span></div>
                 <div id="cps-display">Auto-clics/sec: <span id="cps">0</span></div>
@@ -133,7 +134,8 @@
             <button id="click-button" onclick="augmenterScoreManuel()">
                 <span id="current-skin" class="brain-emoji">🧠</span>
             </button>
-            <p><small id="save-status">Jeu non sauvegardé.</small></p>
+            <!-- Texte de l'image -->
+            <p><small id="save-status">Jeu non sauvegardé..</small></p>
         </div>
 
         <div id="right-panel">
@@ -151,8 +153,9 @@
                 </div>
             </div>
             
+            <!-- Texte de l'image -->
             <button id="minigame-main-button" onclick="showMinigameChoices()">
-                Lancer Défi de Vol (Prêt) 🧠⚡
+                Lancer Défi de Vol (Prêt) ⚡
             </button>
 
             <div id="skins-container" class="control-container">
@@ -162,6 +165,7 @@
                 </div>
             </div>
 
+            <!-- Texte de l'image -->
             <button id="reset-button" onclick="resetGame()">
                 Réinitialiser le jeu
             </button>
@@ -198,8 +202,6 @@
         let minigameInterval;
         let currentChallenge = {};
 
-        // --- NOUVELLES DONNÉES : Upgrades CPC, CPS et Skins étendus ---
-
         const cpcUpgrades = [
             { id: 'muscles', name: 'Doigts Musclés', baseCost: 50, cpcBoost: 1, count: 0 },
             { id: 'optic', name: 'Souris Optique', baseCost: 500, cpcBoost: 5, count: 0 },
@@ -228,9 +230,9 @@
             { id: 'normal', emoji: '🧠', cost: 0, multiplier: 1, owned: true },
             { id: 'gold', emoji: '💛', cost: 1000, multiplier: 2, owned: false },
             { id: 'rainbow', emoji: '🌈', cost: 10000, multiplier: 5, owned: false },
-            { id: 'diamond', emoji: '💎', cost: 100000, multiplier: 10, owned: false }, // Nouveau
-            { id: 'cyborg', emoji: '🤖', cost: 1000000, multiplier: 25, owned: false }, // Nouveau
-            { id: 'alien', emoji: '👽', cost: 10000000, multiplier: 50, owned: false }  // Nouveau
+            { id: 'diamond', emoji: '💎', cost: 100000, multiplier: 10, owned: false },
+            { id: 'cyborg', emoji: '🤖', cost: 1000000, multiplier: 25, owned: false },
+            { id: 'alien', emoji: '👽', cost: 10000000, multiplier: 50, owned: false }
         ];
         let currentSkin = skins.find(s => s.id === 'normal');
 
@@ -238,182 +240,49 @@
         const minigameMainButton = document.getElementById('minigame-main-button');
         const saveStatusElement = document.getElementById('save-status');
         const cpcUpgradeShopElement = document.getElementById('cpc-upgrade-shop');
+        const upgradeShopElement = document.getElementById('upgrade-shop');
+        const skinShopElement = document.getElementById('skin-shop');
 
 
-        // --- Logique de Sauvegarde et Chargement MISE À JOUR ---
-        function saveGame() {
-            const saveData = {
-                score: score,
-                clicksPerClick: clicksPerClick,
-                baseAutoClickRate: baseAutoClickRate,
-                skinMultiplier: skinMultiplier,
-                upgrades: upgrades, 
-                cpcUpgrades: cpcUpgrades, // Inclus les upgrades CPC
-                skins: skins,     
-                currentSkinId: currentSkin.id,
-                lastCooldownEndTimestamp: lastCooldownEndTimestamp
-            };
-            localStorage.setItem('brainrotClickerSave', JSON.stringify(saveData));
-            saveStatusElement.textContent = "Jeu sauvegardé automatiquement !";
-            setTimeout(() => saveStatusElement.textContent = "", 3000);
-        }
-
-        function loadGame() {
-            const savedData = JSON.parse(localStorage.getItem('brainrotClickerSave'));
-            if (savedData) {
-                score = savedData.score || 0;
-                // clicksPerClick et baseAutoClickRate sont recalculés après chargement des comptes
-                skinMultiplier = savedData.skinMultiplier || 1;
-                lastCooldownEndTimestamp = savedData.lastCooldownEndTimestamp || 0;
-                
-                if (savedData.upgrades) savedData.upgrades.forEach(su => { const lu = upgrades.find(u => u.id === su.id); if (lu) lu.count = su.count; });
-                if (savedData.cpcUpgrades) savedData.cpcUpgrades.forEach(sc => { const lc = cpcUpgrades.find(u => u.id === sc.id); if (lc) lc.count = sc.count; });
-                if (savedData.skins) savedData.skins.forEach(ss => { const ls = skins.find(s => s.id === ss.id); if (ls) ls.owned = ss.owned; });
-                
-                const savedCurrentSkin = skins.find(s => s.id === savedData.currentSkinId);
-                if (savedCurrentSkin) useSkin(savedCurrentSkin.id);
-
-                // Recalcule les totaux
-                recalculateTotals(); 
-
-                if (lastCooldownEndTimestamp > Date.now()) { applyCooldown(); } else { minigameMainButton.disabled = false; minigameMainButton.textContent = "Lancer Défi de Vol (Prêt) 🧠⚡"; }
-
-                updateDisplay();
-                saveStatusElement.textContent = "Partie chargée !";
-                setTimeout(() => saveStatusElement.textContent = "", 3000);
-            } else {
-                resetGame();
-                saveStatusElement.textContent = "Nouvelle partie commencée.";
-                setTimeout(() => saveStatusElement.textContent = "", 3000);
-            }
-        }
-
+        function augmenterScoreManuel() { score += clicksPerClick; updateDisplay(); }
+        function augmenterScoreAutomatique() { let totalCps = baseAutoClickRate * skinMultiplier; score += totalCps; updateDisplay(); }
         function recalculateTotals() {
-             // Recalcule CPC total
              clicksPerClick = 1 + cpcUpgrades.reduce((total, upgrade) => total + (upgrade.count * upgrade.cpcBoost), 0);
-             // Recalcule CPS de base total
              baseAutoClickRate = upgrades.reduce((total, upgrade) => total + (upgrade.count * upgrade.cps), 0);
-             // Le skin multiplier est déjà géré par useSkin()
-        }
-        // --- Fin Logique de Sauvegarde et Chargement ---
-
-
-        // --- Logique d'achat CPC et Rendu MISE À JOUR ---
-
-        function buyCpcUpgrade(upgradeId) {
-            const upgrade = cpcUpgrades.find(u => u.id === upgradeId);
-            const currentCost = Math.floor(upgrade.baseCost * Math.pow(1.2, upgrade.count)); // Augmentation 20%
-            if (score >= currentCost) {
-                score -= currentCost;
-                upgrade.count += 1;
-                recalculateTotals(); // Met à jour le total CPC immédiatement
-                updateDisplay();
-                renderCpcUpgradeShop();
-            }
         }
         
-        function renderCpcUpgradeShop() {
-            cpcUpgradeShopElement.innerHTML = '';
-            cpcUpgrades.forEach(upgrade => {
-                const currentCost = Math.floor(upgrade.baseCost * Math.pow(1.2, upgrade.count));
-                const button = document.createElement('button');
-                button.innerHTML = `${upgrade.name} (+${upgrade.cpcBoost} CPC) (Coût: ${currentCost.toLocaleString()}, Possédé: ${upgrade.count})`;
-                button.onclick = () => buyCpcUpgrade(upgrade.id);
-                button.disabled = (score < currentCost);
-                cpcUpgradeShopElement.appendChild(button);
-            });
-        }
+        // --- Logique Mini-Jeu / Cooldown (inchangée) ---
+        function showMinigameChoices() { /* ... */ if (minigameMainButton.disabled) return; document.getElementById('minigame-popup').style.display = 'flex'; document.getElementById('challenge-choices').style.display = 'block'; document.getElementById('challenge-active-area').style.display = 'none'; }
+        function startChallenge(requiredClicks, timeLimitSeconds, rewardAmount) { /* ... */ if (minigameActive) return; document.getElementById('challenge-choices').style.display = 'none'; document.getElementById('challenge-active-area').style.display = 'block'; currentChallenge = { required: requiredClicks, time: timeLimitSeconds, reward: rewardAmount }; minigameActive = true; minigameClicksMade = 0; document.getElementById('time-left').textContent = currentChallenge.time.toFixed(1); document.getElementById('clicks-made').textContent = minigameClicksMade; document.getElementById('clicks-required-display').textContent = currentChallenge.required; let timeLeft = currentChallenge.time; minigameInterval = setInterval(() => { timeLeft -= 0.1; document.getElementById('time-left').textContent = timeLeft.toFixed(1); if (timeLeft <= 0) { clearInterval(minigameInterval); endMinigame(false); } }, 100); }
+        function handleMinigameClick() { /* ... */ if (!minigameActive) return; minigameClicksMade++; document.getElementById('clicks-made').textContent = minigameClicksMade; if (minigameClicksMade >= currentChallenge.required) { clearInterval(minigameInterval); endMinigame(true); } }
+        function endMinigame(won) { /* ... */ minigameActive = false; document.getElementById('minigame-popup').style.display = 'none'; if (won) { score += currentChallenge.reward; alert(`VICTOIRE ! Vous avez volé ${currentChallenge.reward.toLocaleString()} points bonus !`); } else { alert("TEMPS ÉCOULÉ ou objectif non atteint ! Vous n'avez rien volé cette fois-ci."); } applyCooldown(); updateDisplay(); }
+        function applyCooldown() { /* ... */ const COOLDOWN_TIME_MS = 900000; lastCooldownEndTimestamp = Date.now() + COOLDOWN_TIME_MS; minigameMainButton.disabled = true; const countdownInterval = setInterval(() => { const msLeft = lastCooldownEndTimestamp - Date.now(); if (msLeft <= 0) { clearInterval(countdownInterval); minigameMainButton.disabled = false; minigameMainButton.textContent = "Lancer Défi de Vol (Prêt) 🧠⚡"; } else { const minutes = Math.floor(msLeft / 60000); const seconds = Math.floor((msLeft % 60000) / 1000); minigameMainButton.textContent = `Prochain vol dans ${minutes}:${seconds < 10 ? '0' : ''}${seconds}`; } }, 1000); }
         
-        // --- Logique d'achat CPS et Rendu (mise à jour pour utiliser recalculateTotals) ---
-        function buyUpgrade(upgradeId) {
-            const upgrade = upgrades.find(u => u.id === upgradeId);
-            const currentCost = Math.floor(upgrade.baseCost * Math.pow(1.15, upgrade.count));
-            if (score >= currentCost) {
-                score -= currentCost;
-                upgrade.count += 1;
-                recalculateTotals(); // Met à jour le total CPS immédiatement
-                updateDisplay();
-                renderUpgradeShop();
-            }
-        }
+        // --- Logique de Sauvegarde/Chargement (inchangée) ---
+        function saveGame() { /* ... */ const saveData = { score: score, clicksPerClick: clicksPerClick, baseAutoClickRate: baseAutoClickRate, skinMultiplier: skinMultiplier, upgrades: upgrades, cpcUpgrades: cpcUpgrades, skins: skins, currentSkinId: currentSkin.id, lastCooldownEndTimestamp: lastCooldownEndTimestamp }; localStorage.setItem('brainrotClickerSave', JSON.stringify(saveData)); saveStatusElement.textContent = "Jeu sauvegardé automatiquement !"; setTimeout(() => saveStatusElement.textContent = "Jeu non sauvegardé..", 3000); }
+        function loadGame() { /* ... */ const savedData = JSON.parse(localStorage.getItem('brainrotClickerSave')); if (savedData) { score = savedData.score || 0; skinMultiplier = savedData.skinMultiplier || 1; lastCooldownEndTimestamp = savedData.lastCooldownEndTimestamp || 0; if (savedData.upgrades) savedData.upgrades.forEach(su => { const lu = upgrades.find(u => u.id === su.id); if (lu) lu.count = su.count; }); if (savedData.cpcUpgrades) savedData.cpcUpgrades.forEach(sc => { const lc = cpcUpgrades.find(u => u.id === sc.id); if (lc) lc.count = sc.count; }); if (savedData.skins) savedData.skins.forEach(ss => { const ls = skins.find(s => s.id === ss.id); if (ls) ls.owned = ss.owned; }); const savedCurrentSkin = skins.find(s => s.id === savedData.currentSkinId); if (savedCurrentSkin) useSkin(savedCurrentSkin.id); recalculateTotals(); if (lastCooldownEndTimestamp > Date.now()) { applyCooldown(); } else { minigameMainButton.disabled = false; minigameMainButton.textContent = "Lancer Défi de Vol (Prêt) 🧠⚡"; } updateDisplay(); saveStatusElement.textContent = "Partie chargée !"; setTimeout(() => saveStatusElement.textContent = "Jeu non sauvegardé..", 3000); } else { resetGame(); saveStatusElement.textContent = "Nouvelle partie commencée."; setTimeout(() => saveStatusElement.textContent = "Jeu non sauvegardé..", 3000); } }
         
-        function renderUpgradeShop() {
-            const upgradeShopElement = document.getElementById('upgrade-shop');
-            upgradeShopElement.innerHTML = '';
-            upgrades.forEach(upgrade => {
-                const currentCost = Math.floor(upgrade.baseCost * Math.pow(1.15, upgrade.count));
-                const button = document.createElement('button');
-                button.innerHTML = `${upgrade.name} (+${upgrade.cps} CPS) (Coût: ${currentCost.toLocaleString()}, Possédé: ${upgrade.count})`;
-                button.onclick = () => buyUpgrade(upgrade.id);
-                button.disabled = (score < currentCost);
-                upgradeShopElement.appendChild(button);
-            });
-        }
+        // --- Logique d'achat CPC et Rendu (inchangée) ---
+        function buyCpcUpgrade(upgradeId) { const upgrade = cpcUpgrades.find(u => u.id === upgradeId); const currentCost = Math.floor(upgrade.baseCost * Math.pow(1.2, upgrade.count)); if (score >= currentCost) { score -= currentCost; upgrade.count += 1; recalculateTotals(); updateDisplay(); renderCpcUpgradeShop(); } }
+        function renderCpcUpgradeShop() { cpcUpgradeShopElement.innerHTML = ''; cpcUpgrades.forEach(upgrade => { const currentCost = Math.floor(upgrade.baseCost * Math.pow(1.2, upgrade.count)); const button = document.createElement('button'); button.innerHTML = `${upgrade.name} (+${upgrade.cpcBoost} CPC) (Coût: ${currentCost.toLocaleString()}, Possédé: ${upgrade.count})`; button.onclick = () => buyCpcUpgrade(upgrade.id); button.disabled = (score < currentCost); cpcUpgradeShopElement.appendChild(button); }); }
         
-        // ... (Fonctions buySkin, useSkin, renderSkinShop, resetGame, updateDisplay mises à jour pour utiliser les nouvelles variables) ...
+        // --- Logique d'achat CPS et Rendu (inchangée) ---
+        function buyUpgrade(upgradeId) { const upgrade = upgrades.find(u => u.id === upgradeId); const currentCost = Math.floor(upgrade.baseCost * Math.pow(1.15, upgrade.count)); if (score >= currentCost) { score -= currentCost; upgrade.count += 1; recalculateTotals(); updateDisplay(); renderUpgradeShop(); } }
+        function renderUpgradeShop() { upgradeShopElement.innerHTML = ''; upgrades.forEach(upgrade => { const currentCost = Math.floor(upgrade.baseCost * Math.pow(1.15, upgrade.count)); const button = document.createElement('button'); button.innerHTML = `${upgrade.name} (+${upgrade.cps} CPS) (Coût: ${currentCost.toLocaleString()}, Possédé: ${upgrade.count})`; button.onclick = () => buyUpgrade(upgrade.id); button.disabled = (score < currentCost); upgradeShopElement.appendChild(button); }); }
+        
+        // --- Logique des Skins et Rendu (inchangée) ---
+        function buySkin(skinId) { const skin = skins.find(s => s.id === skinId); if (skin && !skin.owned && score >= skin.cost) { score -= skin.cost; skin.owned = true; useSkin(skinId); updateDisplay(); renderSkinShop(); } }
+        function useSkin(skinId) { const skin = skins.find(s => s.id === skinId); if (skin && skin.owned) { currentSkin = skin; skinMultiplier = skin.multiplier; document.getElementById('current-skin').textContent = skin.emoji; updateDisplay(); } }
+        function renderSkinShop() { skinShopElement.innerHTML = ''; skins.forEach(skin => { const button = document.createElement('button'); if (skin.owned) { button.textContent = `Utiliser ${skin.emoji} (x${skin.multiplier} CPS)`; button.onclick = () => useSkin(skin.id); if (currentSkin.id === skin.id) { button.disabled = true; } } else { button.textContent = `Acheter ${skin.emoji} (Coût: ${skin.cost.toLocaleString()}, x${skin.multiplier} CPS)`; button.onclick = () => buySkin(skin.id); button.disabled = (score < skin.cost); } skinShopElement.appendChild(button); }); }
 
-        function buySkin(skinId) { /* ... inchangé ... */
-            const skin = skins.find(s => s.id === skinId);
-            if (skin && !skin.owned && score >= skin.cost) {
-                score -= skin.cost;
-                skin.owned = true;
-                useSkin(skinId);
-                updateDisplay();
-                renderSkinShop();
-            }
-        }
-
-        function useSkin(skinId) {
-            const skin = skins.find(s => s.id === skinId);
-            if (skin && skin.owned) {
-                currentSkin = skin;
-                skinMultiplier = skin.multiplier;
-                document.getElementById('current-skin').textContent = skin.emoji;
-                updateDisplay();
-            }
-        }
-
-        function renderSkinShop() {
-            const skinShopElement = document.getElementById('skin-shop');
-            skinShopElement.innerHTML = '';
-            skins.forEach(skin => {
-                const button = document.createElement('button');
-                if (skin.owned) {
-                    button.textContent = `Utiliser ${skin.emoji} (x${skin.multiplier} CPS)`;
-                    button.onclick = () => useSkin(skin.id);
-                    if (currentSkin.id === skin.id) {
-                        button.disabled = true;
-                    }
-                } else {
-                    button.textContent = `Acheter ${skin.emoji} (Coût: ${skin.cost.toLocaleString()}, x${skin.multiplier} CPS)`;
-                    button.onclick = () => buySkin(skin.id);
-                    button.disabled = (score < skin.cost);
-                }
-                skinShopElement.appendChild(button);
-            });
-        }
 
         function resetGame() {
-            score = 0;
-            clicksPerClick = 1;
-            baseAutoClickRate = 0;
-            skinMultiplier = 1;
-            lastCooldownEndTimestamp = 0;
-            // Réinitialise les comptes pour les deux types d'upgrades
-            upgrades.forEach(u => u.count = 0);
-            cpcUpgrades.forEach(u => u.count = 0); 
-            skins.forEach((s, index) => s.owned = (index === 0));
-            useSkin('normal');
-            
-            minigameMainButton.disabled = false;
-            minigameMainButton.textContent = "Lancer Défi de Vol (Prêt) 🧠⚡";
-            localStorage.removeItem('brainrotClickerSave');
-            recalculateTotals(); // Met à jour les totaux après reset
-
-            updateDisplay();
-            renderUpgradeShop();
-            renderCpcUpgradeShop(); // Affiche la boutique CPC
-            renderSkinShop();
+            score = 0; clicksPerClick = 1; baseAutoClickRate = 0; skinMultiplier = 1; lastCooldownEndTimestamp = 0;
+            upgrades.forEach(u => u.count = 0); cpcUpgrades.forEach(u => u.count = 0); 
+            skins.forEach((s, index) => s.owned = (index === 0)); useSkin('normal');
+            minigameMainButton.disabled = false; minigameMainButton.textContent = "Lancer Défi de Vol (Prêt) ⚡";
+            localStorage.removeItem('brainrotClickerSave'); recalculateTotals(); 
+            updateDisplay(); renderUpgradeShop(); renderCpcUpgradeShop(); renderSkinShop();
         }
 
         function updateDisplay() {
@@ -421,24 +290,16 @@
             document.getElementById('cps').textContent = (baseAutoClickRate * skinMultiplier).toLocaleString(); 
             document.getElementById('cpc').textContent = clicksPerClick;
             
+            // Met à jour l'état des boutons pour qu'ils soient vides si aucun achat n'est fait
             renderUpgradeShop();
-            renderCpcUpgradeShop(); // Met à jour l'état des boutons CPC
+            renderCpcUpgradeShop(); 
             renderSkinShop(); 
         }
 
-        // --- Logique du Mini-Jeu (inchangée) ---
-        function showMinigameChoices() { /* ... */ }
-        function startChallenge(requiredClicks, timeLimitSeconds, rewardAmount) { /* ... */ }
-        function handleMinigameClick() { /* ... */ }
-        function endMinigame(won) { /* ... */ }
-        function applyCooldown() { /* ... */ }
-
-
-        // --- Initialisation et Intervalles ---
         setInterval(augmenterScoreAutomatique, 1000);
-        setInterval(saveGame, 10000); // Sauvegarde automatique toutes les 10 secondes
+        setInterval(saveGame, 10000); 
         
-        loadGame(); // Charge la partie au démarrage
+        loadGame(); 
         updateDisplay();
     </script>
 
