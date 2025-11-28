@@ -41,18 +41,7 @@
             box-sizing: border-box; /* S'assure que padding/border sont inclus dans la largeur 100% */
         }
         #minigame-main-button { background-color: #2ecc71; text-align: center; }
-        #discord-button { 
-            background-color: #5865F2; 
-            /* Centre le texte et l'emoji */
-            text-align: center; 
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        #discord-button .logo-emoji {
-            margin-right: 8px; /* Espace entre l'emoji et le texte */
-            font-size: 16px; /* Ajuste la taille de l'emoji */
-        }
+        #discord-button { background-color: #5865F2; text-align: center; }
         button:hover, .discord-link-button:hover { background-color: #416080; }
         button:disabled { cursor: not-allowed; opacity: 0.6; }
         
@@ -128,9 +117,9 @@
                 <div id="skin-shop"></div>
             </div>
             
-            <!-- VOTRE LIEN DISCORD EST ICI -->
-            <a href="discord.gg" target="_blank" rel="noopener noreferrer" class="discord-link-button" id="discord-button">
-                <span class="logo-emoji">🎮</span> Rejoindre Discord
+            <!-- VOTRE NOUVEAU LIEN DISCORD EST ICI -->
+            <a href="https://discord.gg/Y23UZFsqQF" target="_blank" rel="noopener noreferrer" class="discord-link-button" id="discord-button">
+                Rejoindre Discord
             </a>
 
             <button id="reset-button" onclick="resetGame()"> Réinitialiser le jeu </button>
@@ -303,7 +292,6 @@
 
         function autoClick() {
             score += baseAutoClickRate * skinMultiplier;
-            // Pas besoin de checkAchievements ici car il est appelé dans updateUI
         }
 
         function buyCpcUpgrade(id) {
