@@ -1,10 +1,9 @@
-
-   <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Brainrot Clicker (Fonctionnel)</title>
+    <title>Brainrot Clicker</title>
     <style>
         /* --- Styles Généraux (Mobile First) --- */
         body {
@@ -28,13 +27,19 @@
         #score-display { font-size: 36px; color: #f1c40f; }
         #cps-display, #cpc-display { font-size: 16px; }
         #click-button { background: none; border: none; cursor: pointer; transition: transform 0.1s, filter 0.3s; filter: drop-shadow(0 0 5px rgba(0, 0, 0, 0.5)); margin: 10px 0; }
+        /* Cette classe s'applique à l'emoji réel qui a la taille visuelle */
         .brain-emoji { font-size: 150px; display: block; }
         #right-panel { padding: 10px; overflow-y: auto; height: auto; }
         .control-container h3 { border-bottom: 1px solid #1a242f; padding-bottom: 5px; margin-top: 15px; color: #61dafb; }
-        button { padding: 10px; background-color: #34495e; border: 1px solid #1a242f; border-radius: 0; color: white; cursor: pointer; font-size: 14px; margin: 3px 0; width: 100%; text-align: left; transition: background-color 0.2s; }
+        button, .discord-link-button { /* Appliquer styles aux boutons ET au lien Discord */
+            padding: 10px; background-color: #34495e; border: 1px solid #1a242f; border-radius: 0; color: white; cursor: pointer; font-size: 14px; margin: 3px 0; width: 100%; text-align: left; transition: background-color 0.2s;
+            text-decoration: none; /* Enlève le soulignement du lien */
+            display: block; /* Force le lien à prendre 100% de la largeur comme les boutons */
+            box-sizing: border-box; /* S'assure que padding/border sont inclus dans la largeur 100% */
+        }
         #minigame-main-button { background-color: #2ecc71; text-align: center; }
         #discord-button { background-color: #5865F2; text-align: center; }
-        button:hover { background-color: #416080; }
+        button:hover, .discord-link-button:hover { background-color: #416080; }
         button:disabled { background-color: #34495e80; cursor: not-allowed; opacity: 0.6; }
         
         /* Style pour l'événement Cerveau Doré */
@@ -83,6 +88,7 @@
                 <div id="cps-display">Auto-clics/sec: <span id="cps">0</span></div>
             </div>
             
+            <!-- Le bouton a une fonction onclick mais son contenu est uniquement l'emoji span -->
             <button id="click-button" onclick="augmenterScoreManuel()">
                 <span id="current-skin" class="brain-emoji">🧠</span>
             </button>
@@ -109,8 +115,9 @@
                 <div id="skin-shop"></div>
             </div>
             
-            <a href="discord.gg" target="_blank" rel="noopener noreferrer">
-                <button id="discord-button">Rejoindre Discord</button>
+            <!-- Lien Discord prêt à recevoir votre URL -->
+            <a href="URL_DE_VOTRE_INVITATION_DISCORD_ICI" target="_blank" rel="noopener noreferrer" class="discord-link-button" id="discord-button">
+                Rejoindre Discord
             </a>
 
             <button id="reset-button" onclick="resetGame()"> Réinitialiser le jeu </button>
@@ -163,14 +170,12 @@
             { id: 'cpc1', name: 'Pouvoir du Clic x2', baseCost: 10, costMultiplier: 1.5, cpcBoost: 1, owned: 0 },
             { id: 'cpc2', name: 'Pouvoir du Clic x5', baseCost: 100, costMultiplier: 1.5, cpcBoost: 4, owned: 0 },
             { id: 'cpc3', name: 'Pouvoir du Clic x10', baseCost: 1000, costMultiplier: 1.5, cpcBoost: 9, owned: 0 },
-            // Ajoutez d'autres CPC ici
         ];
 
         const upgrades = [
             { id: 'auto1', name: 'Bot Simple', baseCost: 15, costMultiplier: 1.1, cps: 0.1, owned: 0 },
             { id: 'auto2', name: 'Ferme à Cerveaux', baseCost: 100, costMultiplier: 1.1, cps: 0.5, owned: 0 },
             { id: 'auto3', name: 'Influenceur TikTok', baseCost: 1000, costMultiplier: 1.1, cps: 5, owned: 0 },
-            // Ajoutez d'autres CPS ici
         ];
 
         const skins = [
@@ -219,11 +224,11 @@
             skins.forEach(skin => {
                 const button = document.createElement('button');
                 if (skin.owned) {
-                    button.innerHTML = `${skin.emoji} ${skin.name} (x${skin.multiplier}) - ÉQUIPER`;
                     if (currentSkinEmoji === skin.emoji) {
                          button.disabled = true;
                          button.innerHTML = `${skin.emoji} ${skin.name} (Équipé)`;
                     } else {
+                        button.innerHTML = `${skin.emoji} ${skin.name} (x${skin.multiplier}) - ÉQUIPER`;
                         button.onclick = () => equipSkin(skin.id);
                     }
                 } else {
@@ -254,7 +259,6 @@
         function augmenterScoreManuel() {
             if (minigameActive) return;
             score += clicksPerClick * skinMultiplier;
-            // Animation/Feedback visuel basique
             const button = document.getElementById('click-button');
             button.style.transform = 'scale(0.9)';
             setTimeout(() => button.style.transform = 'scale(1)', 100);
@@ -319,7 +323,8 @@
                     if (valueToCheck >= ach.requirement) {
                         ach.unlocked = true;
                         playSound(SOUND_ACHIEVEMENT);
-                        alert(`SUCCÈS DÉBLOQUÉ : ${ach.name} - ${ach.description}`);
+                        // Ne pas utiliser alert() ici pour ne pas bloquer le jeu loop, idéalement utiliser une notification custom
+                        console.log(`SUCCÈS DÉBLOQUÉ : ${ach.name}`);
                     }
                 }
             });
@@ -356,8 +361,6 @@
                 currentSkinEmoji = data.currentSkinEmoji;
                 goldenBrainsClicked = data.goldenBrainsClicked || 0;
                 
-                // Mettre à jour les tableaux d'objets avec les données sauvegardées
-                // Note: Une méthode plus robuste serait nécessaire pour les versions futures si les structures changent
                 if (data.cpcUpgrades) data.cpcUpgrades.forEach(s => Object.assign(cpcUpgrades.find(d => d.id === s.id) || {}, s));
                 if (data.upgrades) data.upgrades.forEach(s => Object.assign(upgrades.find(d => d.id === s.id) || {}, s));
                 if (data.skins) data.skins.forEach(s => Object.assign(skins.find(d => d.id === s.id) || {}, s));
@@ -378,7 +381,6 @@
         // --- Fonctions Mini-Jeu (Vol de points) ---
 
         function showMinigameChoices() {
-            // Empêche de spammer si déjà ouvert ou en cooldown
             const now = Date.now();
             if (now < lastCooldownEndTimestamp) {
                 alert(`Le mini-jeu est en cooldown. Revenez dans ${Math.ceil((lastCooldownEndTimestamp - now) / 1000)} secondes.`);
@@ -427,14 +429,13 @@
             minigameActive = false;
             document.getElementById('minigame-popup').style.display = 'none';
             
-            // Cooldown de 60 secondes après un mini-jeu
             lastCooldownEndTimestamp = Date.now() + 60000; 
             
             if (success) {
                 score += currentChallenge.reward;
-                alert(`Victoire ! Vous avez gagné ${currentChallenge.reward} points !`);
+                console.log(`Victoire ! Vous avez gagné ${currentChallenge.reward} points !`);
             } else {
-                alert("Temps écoulé ! Vous avez échoué au défi.");
+                 console.log("Temps écoulé ! Vous avez échoué au défi.");
             }
             updateUI();
         }
@@ -453,18 +454,17 @@
         // --- Événement Cerveau Doré Aléatoire ---
 
         function spawnGoldenBrain() {
-            if (document.getElementById('golden-brain')) return; // Empêche le spam
+            if (document.getElementById('golden-brain')) return;
             playSound(SOUND_EVENT);
 
             const brain = document.createElement('div');
             brain.id = 'golden-brain';
-            brain.textContent = '🌟'; // Emoji cerveau doré
+            brain.textContent = '🌟';
             brain.style.top = `${Math.random() * (window.innerHeight - 50)}px`;
             brain.style.left = `${Math.random() * (window.innerWidth - 50)}px`;
             brain.onclick = clickGoldenBrain;
             document.body.appendChild(brain);
 
-            // Disparaît après 5 secondes
             goldenBrainTimeout = setTimeout(() => {
                 if (brain.parentNode) brain.parentNode.removeChild(brain);
             }, 5000);
@@ -476,25 +476,21 @@
             clearTimeout(goldenBrainTimeout);
             brain.parentNode.removeChild(brain);
             
-            const pointsGained = Math.floor(score * 0.1) + 50; // 10% du score actuel + 50 points bonus
+            const pointsGained = Math.floor(score * 0.1) + 50;
             score += pointsGained;
-            goldenBrainsClicked++; // Pour le succès
-            alert(`Cerveau doré cliqué ! Vous gagnez ${pointsGained} points !`);
+            goldenBrainsClicked++;
+            console.log(`Cerveau doré cliqué ! Vous gagnez ${pointsGained} points !`);
             updateUI();
         }
         
         // --- Initialisation et Boucle Principale ---
 
-        // Sauvegarde toutes les 10 secondes
         setInterval(saveGame, 10000); 
-        // Auto-clic toutes les 100ms
         setInterval(autoClick, 100); 
-        // Tente de faire apparaître un cerveau doré toutes les 30 secondes (probabilité de 10%)
         setInterval(() => {
             if (Math.random() < 0.1) spawnGoldenBrain();
         }, 30000);
 
-        // Au chargement de la page:
         window.onload = () => {
             loadGame();
             updateUI();
