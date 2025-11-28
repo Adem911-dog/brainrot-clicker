@@ -41,7 +41,18 @@
             box-sizing: border-box; /* S'assure que padding/border sont inclus dans la largeur 100% */
         }
         #minigame-main-button { background-color: #2ecc71; text-align: center; }
-        #discord-button { background-color: #5865F2; text-align: center; }
+        #discord-button { 
+            background-color: #5865F2; 
+            /* Centre le texte et l'emoji */
+            text-align: center; 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        #discord-button .logo-emoji {
+            margin-right: 8px; /* Espace entre l'emoji et le texte */
+            font-size: 16px; /* Ajuste la taille de l'emoji */
+        }
         button:hover, .discord-link-button:hover { background-color: #416080; }
         button:disabled { cursor: not-allowed; opacity: 0.6; }
         
@@ -117,8 +128,9 @@
                 <div id="skin-shop"></div>
             </div>
             
+            <!-- VOTRE LIEN DISCORD EST ICI -->
             <a href="discord.gg" target="_blank" rel="noopener noreferrer" class="discord-link-button" id="discord-button">
-                Rejoindre Discord
+                <span class="logo-emoji">🎮</span> Rejoindre Discord
             </a>
 
             <button id="reset-button" onclick="resetGame()"> Réinitialiser le jeu </button>
@@ -215,6 +227,8 @@
             { id: 'gclicker2', name: 'Collectionneur d\'Étoiles', description: 'Cliquer sur 50 cerveaux dorés.', requirement: 50, statToTrack: 'goldenBrainsClicked', unlocked: false },
         ];
 
+        // --- Fonctions d'Interface Utilisateur ---
+
         function updateUI() {
             document.getElementById('score').textContent = Math.floor(score);
             document.getElementById('cpc').textContent = Math.floor(clicksPerClick * skinMultiplier);
@@ -275,6 +289,8 @@
             });
         }
         
+        // --- Fonctions du Jeu ---
+
         function augmenterScoreManuel() {
             if (minigameActive) return;
             score += clicksPerClick * skinMultiplier;
@@ -287,7 +303,7 @@
 
         function autoClick() {
             score += baseAutoClickRate * skinMultiplier;
-            checkAchievements();
+            // Pas besoin de checkAchievements ici car il est appelé dans updateUI
         }
 
         function buyCpcUpgrade(id) {
@@ -342,11 +358,13 @@
                     if (valueToCheck >= ach.requirement) {
                         ach.unlocked = true;
                         playSound(SOUND_ACHIEVEMENT);
-                        console.log(`SUCCÈS DÉBLOQUÉ : ${ach.name}`);
+                        console.log(`SUCCÈS DÉBLOQUÉ : ${ach.name} - ${ach.description}`);
                     }
                 }
             });
         }
+
+        // --- Système de Sauvegarde ---
 
         function saveGame() {
             const saveData = {
@@ -386,6 +404,8 @@
             }
         }
         
+        // --- Fonctions Mini-Jeu (Vol de points) ---
+
         function showMinigameChoices() {
             const now = Date.now();
             if (now < lastCooldownEndTimestamp) {
